@@ -12,17 +12,20 @@ local M = {}
 --- @param overrides table|nil Override values
 --- @return table Merged table
 function M.merge(defaults, overrides)
-  if type(defaults) ~= "table" then
-    defaults = {}
-  end
-
   local result = {}
-  for k, v in pairs(defaults) do
-    result[k] = v
+  
+  if type(defaults) == "table" then
+    for k, v in pairs(defaults) do
+      result[k] = v
+    end
   end
-  for k, v in pairs(overrides or {}) do
-    result[k] = v
+  
+  if type(overrides) == "table" then
+    for k, v in pairs(overrides) do
+      result[k] = v
+    end
   end
+  
   return result
 end
 
@@ -30,42 +33,39 @@ end
 --- @param orig table Original table
 --- @return table Copied table
 function M.deep_copy(orig)
-  if type(orig) ~= "table" then
-    return orig
+  if type(orig) == "table" then
+    local copy = {}
+    for key, value in next, orig, nil do
+      copy[M.deep_copy(key)] = M.deep_copy(value)
+    end
+    setmetatable(copy, M.deep_copy(getmetatable(orig)))
+    return copy
   end
-
-  local copy = {}
-  for key, value in next, orig, nil do
-    copy[M.deep_copy(key)] = M.deep_copy(value)
-  end
-  setmetatable(copy, M.deep_copy(getmetatable(orig)))
-
-  return copy
+  return orig
 end
 
 --- Check if table is empty
 --- @param tbl table Table to check
 --- @return boolean
 function M.is_empty(tbl)
-  if type(tbl) ~= "table" then
-    return true
+  if type(tbl) == "table" then
+    return next(tbl) == nil
   end
-  return next(tbl) == nil
+  return true
 end
 
 --- Get table size (works for non-sequential tables)
 --- @param tbl table Table to measure
 --- @return number Count of elements
 function M.size(tbl)
-  if type(tbl) ~= "table" then
-    return 0
+  if type(tbl) == "table" then
+    local count = 0
+    for _ in pairs(tbl) do
+      count = count + 1
+    end
+    return count
   end
-
-  local count = 0
-  for _ in pairs(tbl) do
-    count = count + 1
-  end
-  return count
+  return 0
 end
 
 --- Check if value exists in table
@@ -73,13 +73,11 @@ end
 --- @param value any Value to find
 --- @return boolean
 function M.contains(tbl, value)
-  if type(tbl) ~= "table" then
-    return false
-  end
-
-  for _, v in pairs(tbl) do
-    if v == value then
-      return true
+  if type(tbl) == "table" then
+    for _, v in pairs(tbl) do
+      if v == value then
+        return true
+      end
     end
   end
   return false

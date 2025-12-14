@@ -4,12 +4,15 @@
 local M = {}
 
 --- Create a new cache instance with TTL support
---- @param opts table|nil Options: { ttl_ms: number }
+--- @param opts table|nil Options: { ttl_ms: number, weak: boolean }
 --- @return table Cache instance
 function M.new(opts)
   opts = opts or {}
+  
+  -- Use weak tables for automatic garbage collection
+  local weak_mode = opts.weak ~= false and "kv" or nil
   local cache = {
-    data = {},
+    data = weak_mode and setmetatable({}, { __mode = weak_mode }) or {},
     timestamps = {},
     ttl_ms = opts.ttl_ms or 150, -- Default 150ms TTL
   }
@@ -67,7 +70,8 @@ function M.new(opts)
 
   --- Clear all cache entries
   function cache:clear()
-    self.data = {}
+    local weak_mode = opts.weak ~= false and "kv" or nil
+    self.data = weak_mode and setmetatable({}, { __mode = weak_mode }) or {}
     self.timestamps = {}
   end
 

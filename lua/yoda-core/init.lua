@@ -1,6 +1,7 @@
 local M = {}
 
 local _is_setup = false
+local _module_cache = {}
 
 M._config = {
   use_di = false,
@@ -18,36 +19,53 @@ function M.setup(opts)
   _is_setup = true
 end
 
-function M.cache(opts)
-  return require("yoda-core.cache").new(opts)
+local function lazy_load_module(module_name, module_name_di, create_new)
+  return function(deps_or_opts)
+    local cache_key = M._config.use_di and module_name_di or module_name
+    
+    if not _module_cache[cache_key] then
+      local mod = require(cache_key)
+      if not create_new then
+        _module_cache[cache_key] = mod
+      else
+        return create_new(mod, deps_or_opts)
+      end
+    end
+    
+    return _module_cache[cache_key]
+  end
 end
 
-function M.io(deps)
-  if M._config.use_di then
-    return require("yoda-core.io_di").new(deps or M._config.dependencies)
-  end
-  return require("yoda-core.io")
-end
+M.cache = lazy_load_module("yoda-core.cache", nil, function(mod, opts)
+  return mod.new(opts)
+end)
 
-function M.platform(deps)
+M.io = lazy_load_module("yoda-core.io", "yoda-core.io_di", function(mod, deps)
   if M._config.use_di then
-    return require("yoda-core.platform_di").new(deps or M._config.dependencies)
+    return mod.new(deps or M._config.dependencies)
   end
-  return require("yoda-core.platform")
-end
+  return mod
+end)
 
-function M.string(deps)
+M.platform = lazy_load_module("yoda-core.platform", "yoda-core.platform_di", function(mod, deps)
   if M._config.use_di then
-    return require("yoda-core.string_di").new(deps or M._config.dependencies)
+    return mod.new(deps or M._config.dependencies)
   end
-  return require("yoda-core.string")
-end
+  return mod
+end)
 
-function M.table(deps)
+M.string = lazy_load_module("yoda-core.string", "yoda-core.string_di", function(mod, deps)
   if M._config.use_di then
-    return require("yoda-core.table_di").new(deps or M._config.dependencies)
+    return mod.new(deps or M._config.dependencies)
   end
-  return require("yoda-core.table")
-end
+  return mod
+end)
+
+M.table = lazy_load_module("yoda-core.table", "yoda-core.table_di", function(mod, deps)
+  if M._config.use_di then
+    return mod.new(deps or M._config.dependencies)
+  end
+  return mod
+end)
 
 return M
